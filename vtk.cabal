@@ -2,11 +2,11 @@ name:           vtk
 version:        0.1.0
 cabal-version:  >= 1.8
 build-type:     Simple
-license:        GPL-3
+license:        BSD3
 license-file:   LICENSE
 maintainer:     Edgar Gomes de Araujo
 stability:      experimental
-bug-reports:    talktoedgar@gmail.com
+bug-reports:    talktoedgar at gmail dot com
 synopsis:       Library to generate VTK files for 3D visualizations.
 description:    Library to generate VTK files for 3D visualizations.
 category:       Data
