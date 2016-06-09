@@ -5,7 +5,6 @@
   , MultiParamTypeClasses
   , NamedFieldPuns
   , OverloadedStrings
-  , RecordWildCards
   , TypeSynonymInstances
   #-}
 
@@ -42,19 +41,18 @@ module Data.VTK
   , VTKNumType (..)
   ) where
 
-import qualified Data.ByteString.Lazy             as BSL
-import qualified Data.IntMap                      as IM
-import qualified Data.List                        as L
-import qualified Data.Vector                      as V
-import qualified Data.Vector.Unboxed              as U
-import qualified Text.XML.Generator               as X
+import Data.IntMap (IntMap)
+import Data.Text (pack)
+import Data.Vector.Unboxed (Vector)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.IntMap          as IM
+import qualified Data.List            as L
+import qualified Data.Vector          as V
+import qualified Data.Vector.Unboxed  as U
+import qualified Text.XML.Generator   as X
 
-import           Data.IntMap                      (IntMap)
-import           Data.Text                        (pack)
-import           Data.Vector.Unboxed              (Vector)
-
-import           Data.VTK.Types
-import           Data.VTK.VTKXMLTemplate
+import Data.VTK.Types
+import Data.VTK.VTKXMLTemplate
 
 -- =======================================================================================
 
@@ -68,10 +66,10 @@ writeMultiVTKfile name isBinary = BSL.writeFile name . X.xrender . renderVTKMult
 
 -- | Creates an Unstructured Grid dataset. Use:
 --
--- > mkUGVTK "name" (Vec.fromList [Vec3 0 0 0, Vec3 0 1 0]) [(0,1)]
+-- > mkUGVTK "name" [Vec3 0 0 0, Vec3 0 1 0] [(0,1)]
 --
-mkUGVTK :: (RenderElemVTK p, RenderCell shape, FastFoldable cont shape)
-        => String -> Vector p -> cont shape -> [VTKAttrPointValue p] -> [VTKAttrCell p] -> VTK p
+mkUGVTK :: (RenderElemVTK p, RenderCell cell, VTKFoldable t cell)
+        => String -> Vector p -> t cell -> [VTKAttrPointValue p] -> [VTKAttrCell p] -> VTK p
 mkUGVTK name points cells pointData cellData = let
   nameTxt = pack name
   dataset = mkUnstructGrid points cells
@@ -79,10 +77,10 @@ mkUGVTK name points cells pointData cellData = let
 
 -- | Creates an Rectilinear Grid dataset. Use:
 --
--- > mkRLGVTK "name" (Vec.fromList [0,1,2]) (Vec.fromList [0,1,2]) ([(0 0 0), (0 1 0)])
+-- > mkRLGVTK "name" [0,1,2] [0,1,2] [(0 0 0), (0 1 0)]
 --
-mkRLGVTK :: (RenderElemVTK a)=> String -> Vector Double -> Vector Double -> Vector Double ->
-            [VTKAttrPoint a] -> VTK a
+mkRLGVTK :: (RenderElemVTK a)
+         => String -> Vector Double -> Vector Double -> Vector Double -> [VTKAttrPoint a] -> VTK a
 mkRLGVTK name px py pz pointData = let
   nameTxt = pack name
   dataset = mkRectLinGrid px py pz
@@ -92,7 +90,7 @@ mkRLGVTK name px py pz pointData = let
 --
 -- > mkSGVTK "name" 2 1 1 ([(0 0 0), (0 1 0)])
 --
-mkSGVTK :: (RenderElemVTK a)=> String -> Int -> Int -> Int -> [VTKAttrPoint a] -> VTK a
+mkSGVTK :: (RenderElemVTK a) => String -> Int -> Int -> Int -> [VTKAttrPoint a] -> VTK a
 mkSGVTK name nx ny nz pointData = let
   nameTxt = pack name
   dataset = StructGrid { dimSG = (nx, ny, nz) }
@@ -100,15 +98,18 @@ mkSGVTK name nx ny nz pointData = let
 
 -- | Creates an Structured Points dataset (ImageData). Use:
 --
--- > mkSGVTK "name" (2, 1, 1) (0.0, 0.0, 0.0) (5.0, 5.0, 5.0) ([(0 0 0), (0 1 0)])
+-- > mkSGVTK "name" (2, 1, 1) (0.0, 0.0, 0.0) (5.0, 5.0, 5.0) [(0 0 0), (0 1 0)]
 --
-mkSPVTK :: (RenderElemVTK a)=> String -> (Int, Int, Int) -> (Double, Double, Double)
+mkSPVTK :: (RenderElemVTK a)
+        => String -> (Int, Int, Int) -> (Double, Double, Double)
         -> (Double, Double, Double) -> [VTKAttrPoint a] -> VTK a
 mkSPVTK name (dx, dy, dz) orig spc pointData = let
   nameTxt = pack name
-  dataset = StructPoint { dimSP    = (dx-1, dy-1, dz-1)
-                        , originSP = orig
-                        , spaceSP  = spc }
+  dataset = StructPoint
+          { dimSP    = (dx-1, dy-1, dz-1)
+          , originSP = orig
+          , spaceSP  = spc
+          }
   in VTK nameTxt dataset [] pointData []
 
 -- | Adds data to all points in 'VTK'. Internally, it pass the data as a function
@@ -117,8 +118,8 @@ mkSPVTK name (dx, dy, dz) orig spc pointData = let
 -- > let attr = mkPointsAttr "grainID" (\i x -> x * grainIDTable!i)
 -- > addPointValueAttr vtk
 --
-addPointValueAttr :: (RenderElemVTK a)=> VTK a -> VTKAttrPointValue a -> VTK a
-addPointValueAttr VTK{..} attr = VTK { pointValueData = attr:pointValueData, .. }
+addPointValueAttr :: (RenderElemVTK a) => VTK a -> VTKAttrPointValue a -> VTK a
+addPointValueAttr vtk attr = vtk { pointValueData = attr : pointValueData vtk }
 
 -- | Adds data to all points in 'VTK'. Internally, it pass the data as a function
 -- 'VTKAttPoint'.
@@ -126,8 +127,8 @@ addPointValueAttr VTK{..} attr = VTK { pointValueData = attr:pointValueData, .. 
 -- > let attr = mkPointsAttr "grainID" (grainIDTable !)
 -- > addPointAttr vtk
 --
-addPointAttr :: (RenderElemVTK a)=> VTK a -> VTKAttrPoint a -> VTK a
-addPointAttr VTK{..} attr = VTK { pointData = attr:pointData, .. }
+addPointAttr :: (RenderElemVTK a) => VTK a -> VTKAttrPoint a -> VTK a
+addPointAttr vtk attr = vtk { pointData = attr : pointData vtk }
 
 -- | Adds data to all points in 'VTK'. Internally, it pass the data as a function
 -- 'VTKAttPoint'.
@@ -135,14 +136,14 @@ addPointAttr VTK{..} attr = VTK { pointData = attr:pointData, .. }
 -- > let attr = mkCellAttr "color" (\i x cellType -> (Vec3 1 1 1) &* 1/(evalCellType cellType))
 -- > addCellAttr vtk attr
 --
-addCellAttr :: (RenderElemVTK a)=> VTK a -> VTKAttrCell a -> VTK a
-addCellAttr VTK{..} attr = VTK { cellData = attr:cellData, .. }
+addCellAttr :: (RenderElemVTK a) => VTK a -> VTKAttrCell a -> VTK a
+addCellAttr vtk attr = vtk { cellData = attr : cellData vtk }
 
 -- ================================ Internal stuffs ======================================
 
 type CellBuilder = ([Vector Int], [Int], [CellType], Int)
 
-addCell :: (RenderCell shape)=> CellBuilder -> shape -> CellBuilder
+addCell :: (RenderCell cell) => CellBuilder -> cell -> CellBuilder
 addCell set@(cellUG, cellOffUG, cellTypeUG, offCount) obj
   | cell_size <= 0 = set
   | otherwise = (cell : cellUG, cell_off : cellOffUG, cell_type : cellTypeUG , cell_off)
@@ -152,37 +153,39 @@ addCell set@(cellUG, cellOffUG, cellTypeUG, offCount) obj
     cell_size  = U.length cell
     cell_type  = getType obj
 
-mkUnstructGrid :: (RenderElemVTK p, RenderCell shape, FastFoldable cont shape)=>
-                  Vector p -> cont shape -> VTKDataSet p
+mkUnstructGrid :: (RenderElemVTK p, RenderCell cell, VTKFoldable t cell)
+               => Vector p -> t cell -> VTKDataSet p
 mkUnstructGrid points cells = let
   i = ([], [], [], 0)
-  (cell, cell_off, cell_type, _) = folder addCell i cells
-  in UnstructGrid { setUG      = points
-                  , cellUG     = U.concat cell
-                  , cellOffUG  = U.reverse $ U.fromList cell_off
-                  , cellTypeUG = V.reverse $ V.fromList cell_type }
+  (cell, cell_off, cell_type, _) = foldr_ addCell i cells
+  in UnstructGrid
+     { setUG      = points
+     , cellUG     = U.concat cell
+     , cellOffUG  = U.reverse $ U.fromList cell_off
+     , cellTypeUG = V.reverse $ V.fromList cell_type
+     }
 
-mkRectLinGrid :: (RenderElemVTK a)=> Vector Double ->
-                 Vector Double ->  Vector Double -> VTKDataSet a
+mkRectLinGrid :: (RenderElemVTK a)
+              => Vector Double -> Vector Double ->  Vector Double -> VTKDataSet a
 mkRectLinGrid x y z = RectLinGrid { setxRG = x, setyRG = y, setzRG = z }
 
--- ================================ Cell containers ======================================
+-- ================================ Custom Foldable ======================================
 
 -- | Special foldable class since `Foldable` doesn't support unboxed vectors
-class FastFoldable cont b where
-  folder :: (a -> b -> a) -> a -> cont b -> a
+class VTKFoldable t b where
+  foldr_ :: (a -> b -> a) -> a -> t b -> a
 
-instance FastFoldable [] a where
-  folder func = L.foldr (flip func)
+instance VTKFoldable [] a where
+  foldr_ func = L.foldr (flip func)
 
-instance (U.Unbox a)=> FastFoldable Vector a where
-  folder func = U.foldr' (flip func)
+instance (U.Unbox a) => VTKFoldable Vector a where
+  foldr_ func = U.foldr' (flip func)
 
-instance FastFoldable V.Vector a where
-  folder func = V.foldr' (flip func)
+instance VTKFoldable V.Vector a where
+  foldr_ func = V.foldr' (flip func)
 
-instance FastFoldable IntMap a where
-  folder func = IM.fold (flip func)
+instance VTKFoldable IntMap a where
+  foldr_ func = IM.fold (flip func)
 
 -- ================================ Basic instances ======================================
 
