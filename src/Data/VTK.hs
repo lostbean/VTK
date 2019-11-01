@@ -185,7 +185,7 @@ instance VTKFoldable V.Vector a where
   foldr_ func = V.foldr' (flip func)
 
 instance VTKFoldable IntMap a where
-  foldr_ func = IM.fold (flip func)
+  foldr_ func = IM.foldr (flip func)
 
 -- ================================ Basic instances ======================================
 
