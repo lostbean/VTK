@@ -140,6 +140,21 @@ data VTKDataSet a =
     , cellUG     :: Vector Int
     , cellOffUG  :: Vector Int
     , cellTypeUG :: V.Vector CellType
+    }
+
+  | PolyData
+    { setPD        :: Vector a
+    , cellPD       :: Vector Int
+    , cellOffPD    :: Vector Int
+    , cellTypePD   :: V.Vector CellType
+    , polysPD      :: Vector Int
+    , polysOffPD   :: Vector Int
+    , linesPD      :: Vector Int
+    , linesOffPD   :: Vector Int
+    , stripsPD     :: Vector Int
+    , stripsOffPD  :: Vector Int
+    , vertsPD      :: Vector Int
+    , vertsOffPD   :: Vector Int
     } deriving (Show)
 
 getVTKSize :: (RenderElemVTK a)=> VTK a -> Int
@@ -148,6 +163,7 @@ getVTKSize vtk = case dataSet vtk of
   StructGrid  (dx, dy, dz)       -> dx * dy * dz
   RectLinGrid sx sy sz           -> U.length sx * U.length sy * U.length sz
   UnstructGrid{..}               -> U.length setUG
+  PolyData{..}                   -> U.length setPD
 
 getVTKIndex :: (RenderElemVTK a)=> VTK a -> Vector Int
 getVTKIndex vtk = let
@@ -160,6 +176,7 @@ getVTKIndex vtk = let
     StructGrid  size     -> vecSerial size
     RectLinGrid sx sy sz -> vecSerial (U.length sx, U.length sy, U.length sz)
     UnstructGrid{..}     -> U.generate (U.length setUG) id
+    PolyData{..}         -> U.generate (U.length setPD) id
 
 data CellType
   = VTK_VERTEX

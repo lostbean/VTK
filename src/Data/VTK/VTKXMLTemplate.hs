@@ -53,6 +53,7 @@ renderType dataSet = case dataSet of
     in ("RectilinearGrid",  renderWholeExtAttr ext)
   StructGrid   {} -> ("StructuredGrid",   noAttrs)
   UnstructGrid {} -> ("UnstructuredGrid", noAttrs)
+  PolyData     {} -> ("PolyData", noAttrs)
 
 -- =============================== render VTK types ======================================
 
@@ -66,6 +67,8 @@ renderVTK isBinary vtk@VTK{..} = let
       renderRG isBinary setX setY setZ size pointData
     UnstructGrid set cell cellOff cellType ->
       renderUG isBinary set cell cellOff cellType pointValueData cellData
+    PolyData{..}  ->
+      renderPD isBinary setPD cellPD cellOffPD cellTypePD vertsPD vertsOffPD linesPD linesOffPD stripsPD stripsOffPD polysPD polysOffPD pointValueData cellData
 
 renderSG :: a
 renderSG = error "[Data] Can't render this type of VTK file. No implemented yet."
@@ -96,6 +99,43 @@ renderUG isBin set cell cellOff cellType pointData cellData = let
           , renderPoints         isBin set
           , renderCells          isBin cell cellOff cellType U.empty U.empty ]
   in xelem "Piece" (xattrs attrs <#> xelems nodes)
+
+renderPD :: (RenderElemVTK a)
+  => Bool -> Vector a
+  -> Vector Int -> Vector Int -> V.Vector CellType
+  -> Vector Int -> Vector Int
+  -> Vector Int -> Vector Int
+  -> Vector Int -> Vector Int
+  -> Vector Int -> Vector Int
+  -> [VTKAttrPointValue a] -> [VTKAttrCell a] -> Xml Elem
+renderPD
+  isBin set
+  cell cellOff cellType
+  verts vertsOff
+  line linesOff
+  strips stripsOff
+  polys polysOff
+  pointData cellData = let
+    numPoints  = U.length set
+    numVerts   = U.length vertsOff
+    numLines   = U.length linesOff
+    numStrips  = U.length stripsOff
+    numPolys   = U.length polysOff
+    attrs = [ xattr "NumberOfPoints" (toTxt numPoints)
+            , xattr "NumberOfVerts"  (toTxt numVerts)
+            , xattr "NumberOfLines"  (toTxt numLines)
+            , xattr "NumberOfStrips" (toTxt numStrips) 
+            , xattr "NumberOfPolys"  (toTxt numPolys)
+            ]
+    nodes = [ renderPointValueData isBin set pointData
+            , renderCellData       isBin set cell cellOff cellType cellData
+            , renderPoints         isBin set
+            , renderPoly           "Verts" isBin verts vertsOff
+            , renderPoly           "Lines" isBin line linesOff
+            , renderPoly           "Strips" isBin strips stripsOff
+            , renderPoly           "Polys" isBin polys polysOff
+            ]
+    in xelem "Piece" (xattrs attrs <#> xelems nodes)
 
 -- =============================== render tools ==========================================
 
@@ -147,6 +187,13 @@ renderCells isBin cellConn cellOffsets cellTypes faces faceOffsets = let
   func = renderDataArray isBin
   in xelem "Cells" $ xelems full
 
+renderPoly :: Text -> Bool -> Vector Int -> Vector Int -> Xml Elem
+renderPoly polyClass isBin polyConn polyOffsets = let
+  conn   = func polyConn    "connectivity"
+  off    = func polyOffsets "offsets"
+  func = renderDataArray isBin
+  in xelem polyClass  $ xelems [conn, off]
+  
 renderWholeExtAttr :: (Int, Int, Int) -> Xml Attr
 renderWholeExtAttr = xattr "WholeExtent" . renderExtent
 

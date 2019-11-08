@@ -19,6 +19,7 @@ module Data.VTK
   , writeUniVTKfile
   , writeMultiVTKfile
     -- * Make VTK
+  , mkPolyDataVTK
   , mkUGVTK
   , mkRLGVTK
   , mkSGVTK
@@ -63,6 +64,17 @@ writeUniVTKfile name isBinary = BSL.writeFile name . X.xrender . renderVTKUni is
 -- | Write an multi-piece piece VTK file to disk. Set 'True' for binary format.
 writeMultiVTKfile :: (RenderElemVTK a) => FilePath -> Bool -> V.Vector (VTK a) -> IO ()
 writeMultiVTKfile name isBinary = BSL.writeFile name . X.xrender . renderVTKMulti isBinary
+
+-- | Creates an PolyData dataset. Use:
+--
+-- > mkPolyDataVTK "name" [Vec3 0 0 0, Vec3 0 1 0] [(0,1)] [] []
+--
+mkPolyDataVTK :: (RenderElemVTK p, RenderCell cell, VTKFoldable t cell)
+    => String -> Vector p -> t cell -> [VTKAttrPointValue p] -> [VTKAttrCell p] -> VTK p
+mkPolyDataVTK name points cells pointData cellData = let
+  nameTxt = pack name
+  dataset = mkPolyData points cells
+  in VTK nameTxt dataset pointData [] cellData
 
 -- | Creates an Unstructured Grid dataset. Use:
 --
@@ -143,21 +155,51 @@ addCellAttr vtk attr = vtk { cellData = attr : cellData vtk }
 
 type CellBuilder = ([Vector Int], [Int], [CellType], Int)
 
-addCell :: (RenderCell cell) => CellBuilder -> cell -> CellBuilder
-addCell set@(cellUG, cellOffUG, cellTypeUG, offCount) obj
-  | cell_size <= 0 = set
-  | otherwise = (cell : cellUG, cell_off : cellOffUG, cell_type : cellTypeUG , cell_off)
+addCell :: (RenderCell cell) => (CellType -> Bool) -> CellBuilder -> cell -> CellBuilder
+addCell isType set@(cellUG, cellOffUG, cellTypeUG, offCount) obj
+  | cell_size > 0 && isType cell_type = (cell : cellUG, cell_off : cellOffUG, cell_type : cellTypeUG , cell_off)
+  | otherwise = set
   where
     cell       = makeCell obj
     cell_off   = offCount + cell_size
     cell_size  = U.length cell
     cell_type  = getType obj
 
+mkPolyData :: (RenderElemVTK p, RenderCell cell, VTKFoldable t cell)=> Vector p -> t cell -> VTKDataSet p
+mkPolyData points cells = let
+  i = ([], [], [], 0)
+
+  isVerts x = x == VTK_VERTEX || x == VTK_POLY_VERTEX
+  isLines x = x == VTK_LINE || x == VTK_POLY_LINE
+  isStrip x = x == VTK_TRIANGLE_STRIP
+  isPolys x = x == VTK_TRIANGLE || x == VTK_POLYGON || x == VTK_PIXEL || x == VTK_QUAD
+
+  (cell, cell_off, cell_type, _) = foldr_ (addCell $ const True) i cells
+  (verts, verts_off, _, _) = foldr_ (addCell isVerts) i cells
+  (line,  line_off,  _, _) = foldr_ (addCell isLines) i cells
+  (strip, strip_off, _, _) = foldr_ (addCell isStrip) i cells
+  (polys, polys_off, _, _) = foldr_ (addCell isPolys) i cells
+
+  in PolyData
+    { setPD       = points
+    , cellPD      = U.concat cell
+    , cellOffPD   = U.reverse $ U.fromList cell_off
+    , cellTypePD  = V.reverse $ V.fromList cell_type
+    , vertsPD     = U.concat verts
+    , vertsOffPD  = U.reverse $ U.fromList verts_off
+    , linesPD     = U.concat line
+    , linesOffPD  = U.reverse $ U.fromList line_off
+    , stripsPD    = U.concat strip
+    , stripsOffPD = U.reverse $ U.fromList strip_off
+    , polysPD     = U.concat polys
+    , polysOffPD  = U.reverse $ U.fromList polys_off
+    }
+
 mkUnstructGrid :: (RenderElemVTK p, RenderCell cell, VTKFoldable t cell)
                => Vector p -> t cell -> VTKDataSet p
 mkUnstructGrid points cells = let
   i = ([], [], [], 0)
-  (cell, cell_off, cell_type, _) = foldr_ addCell i cells
+  (cell, cell_off, cell_type, _) = foldr_ (addCell $ const True) i cells
   in UnstructGrid
      { setUG      = points
      , cellUG     = U.concat cell
