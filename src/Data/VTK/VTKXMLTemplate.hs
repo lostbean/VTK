@@ -1,8 +1,8 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 
 module Data.VTK.VTKXMLTemplate
-  ( renderVTKUni
-  , renderVTKMulti
+  ( renderUniVTKxml
+  , renderMultiVTKxml
   ) where
 
 import qualified Data.ByteString.Lazy.Builder as BB
@@ -23,14 +23,14 @@ import           Data.VTK.Types
 
 -- =======================================================================================
 
-renderVTKUni::(RenderElemVTK a)=> Bool -> VTK a -> Xml Doc
-renderVTKUni isBinary vtk = let
+renderUniVTKxml::(RenderElemVTK a)=> Bool -> VTK a -> Xml Doc
+renderUniVTKxml isBinary vtk = let
   dataSetType = renderType $ dataSet vtk
   node        = [renderVTK isBinary vtk]
   in renderDoc dataSetType node
 
-renderVTKMulti::(RenderElemVTK a)=> Bool -> V.Vector (VTK a) -> Xml Doc
-renderVTKMulti isBinary vtk = let
+renderMultiVTKxml::(RenderElemVTK a)=> Bool -> V.Vector (VTK a) -> Xml Doc
+renderMultiVTKxml isBinary vtk = let
   dataSetType = if V.null vtk
                 then ("", noAttrs)
                 else (renderType . dataSet .  V.head) vtk

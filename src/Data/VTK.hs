@@ -15,6 +15,9 @@
 -- <http://www.vtk.org/VTK/img/file-formats.pdf>
 module Data.VTK
   ( VTK (..)
+    -- * Render to ByteString
+  , renderUniVTK 
+  , renderMultiVTK 
     -- * Write to file
   , writeUniVTKfile
   , writeMultiVTKfile
@@ -57,13 +60,21 @@ import Data.VTK.VTKXMLTemplate
 
 -- =======================================================================================
 
+-- | Render a single XML VTK. Set 'True' for binary format.
+renderUniVTK :: (RenderElemVTK a) => Bool -> VTK a -> BSL.ByteString
+renderUniVTK isBinary = X.xrender . renderUniVTKxml isBinary
+
+-- | Render a multi-part XML VTK. Set 'True' for binary format.
+renderMultiVTK :: (RenderElemVTK a) => Bool -> V.Vector (VTK a) -> BSL.ByteString
+renderMultiVTK isBinary = X.xrender . renderMultiVTKxml isBinary
+
 -- | Write an unitary piece VTK file to disk. Set 'True' for binary format.
 writeUniVTKfile :: (RenderElemVTK a) => FilePath -> Bool -> VTK a -> IO ()
-writeUniVTKfile name isBinary = BSL.writeFile name . X.xrender . renderVTKUni isBinary
+writeUniVTKfile name isBinary = BSL.writeFile name . renderUniVTK isBinary
 
 -- | Write an multi-piece piece VTK file to disk. Set 'True' for binary format.
 writeMultiVTKfile :: (RenderElemVTK a) => FilePath -> Bool -> V.Vector (VTK a) -> IO ()
-writeMultiVTKfile name isBinary = BSL.writeFile name . X.xrender . renderVTKMulti isBinary
+writeMultiVTKfile name isBinary = BSL.writeFile name . renderMultiVTK isBinary
 
 -- | Creates an PolyData dataset. Use:
 --
