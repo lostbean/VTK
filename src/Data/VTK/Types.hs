@@ -7,12 +7,10 @@
 module Data.VTK.Types where
 
 import qualified Data.ByteString.Builder as BB
-import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text.Lazy.Encoding as TE
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as U
 
-import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Text.Lazy.Builder (toLazyText)
 import Data.Vector.Unboxed (Unbox, Vector)
@@ -54,6 +52,22 @@ instance (RenderElemVTK a) => RenderElemVTK (a, a, a)
 class RenderCell shape where
     makeCell :: shape -> Vector Int
     getType :: shape -> CellType
+
+-- ================================ Basic RenderCell instances =============================
+
+instance RenderCell (Int, Int, Int) where
+    makeCell (a, b, c) = U.fromList [a, b, c]
+    getType _ = VTK_TRIANGLE
+
+instance RenderCell (Int, Int) where
+    makeCell (a, b) = U.fromList [a, b]
+    getType _ = VTK_LINE
+
+instance RenderCell Int where
+    makeCell a = U.singleton a
+    getType _ = VTK_VERTEX
+
+-- =======================================================================================
 
 {- | This function creates an attribute of type 'attr' for each cell.
 It is itself a function that is given to render, where:

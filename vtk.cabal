@@ -29,5 +29,4 @@ library
     Data.VTK.VTKXMLTemplate
 
   hs-source-dirs:  src
-  ghc-options:
-    -O2 -rtsopts -Wall -funbox-strict-fields -threaded -fprof-auto
+  ghc-options:     -O2 -Wall -funbox-strict-fields

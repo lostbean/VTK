@@ -219,17 +219,3 @@ instance FastFoldable V.Vector a where
 
 instance FastFoldable IntMap a where
     folder func = IM.foldr (flip func)
-
--- ================================ Basic instances ======================================
-
-instance RenderCell (Int, Int, Int) where
-    makeCell (a, b, c) = U.fromList [a, b, c]
-    getType _ = VTK_TRIANGLE
-
-instance RenderCell (Int, Int) where
-    makeCell (a, b) = U.fromList [a, b]
-    getType _ = VTK_LINE
-
-instance RenderCell Int where
-    makeCell a = U.singleton a
-    getType _ = VTK_VERTEX

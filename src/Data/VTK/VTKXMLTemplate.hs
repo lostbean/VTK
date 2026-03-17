@@ -13,7 +13,6 @@ import qualified Data.Vector.Unboxed as U
 import qualified Prelude as P
 
 import Data.ByteString.Base64.Lazy (encode)
-import Data.ByteString.Builder (toLazyByteString)
 import Data.Text (Text)
 import Data.Vector.Unboxed (Vector, (!))
 
