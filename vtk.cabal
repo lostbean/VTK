@@ -1,35 +1,33 @@
-name:           vtk
-version:        0.1.0
-cabal-version:  >= 1.8
-build-type:     Simple
-license:        BSD3
-license-file:   LICENSE
-maintainer:     Edgar Gomes de Araujo
-stability:      experimental
-bug-reports:    talktoedgar at gmail dot com
-synopsis:       Library to generate VTK files for 3D visualizations.
-description:    Library to generate VTK files for 3D visualizations.
-category:       Data
-author:         Edgar Gomes de Araujo
+name:          vtk
+version:       0.1.0
+cabal-version: >=1.8
+build-type:    Simple
+license:       BSD3
+license-file:  LICENSE
+maintainer:    Edgar Gomes de Araujo
+stability:     experimental
+bug-reports:   talktoedgar at gmail dot com
+synopsis:      Library to generate VTK files for 3D visualizations.
+description:   Library to generate VTK files for 3D visualizations.
+category:      Data
+author:        Edgar Gomes de Araujo
 
-Library
-  build-depends:  base                    == 4.*
-                , containers
-                , text
-                , bytestring
-                , vector
-                , xmlgen
-                , blaze-builder
-                , base64-bytestring
-  exposed-modules:  Data.VTK
-  other-modules:    Data.VTK.VTKXMLTemplate
-                    Data.VTK.Types
-  hs-source-dirs: src
-  ghc-options:    -O2
-                  -rtsopts
-                  -Wall
-                  -funbox-strict-fields
-                  -threaded
-                  -fprof-auto
-                  -auto-all
-                  -caf-all
+library
+  build-depends:
+      base               >=4 && <5
+    , base64-bytestring
+    , blaze-builder
+    , bytestring
+    , containers
+    , text
+    , vector
+    , xmlgen
+
+  exposed-modules: Data.VTK
+  other-modules:
+    Data.VTK.Types
+    Data.VTK.VTKXMLTemplate
+
+  hs-source-dirs:  src
+  ghc-options:
+    -O2 -rtsopts -Wall -funbox-strict-fields -threaded -fprof-auto
